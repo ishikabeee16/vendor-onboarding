@@ -71,19 +71,21 @@ def summary(status, results, vendor_name):
         if len(b) > 1:
             text += f" (+{len(b) - 1} more blocking issue(s))"
         text += " The vendor gets a neutral rejection email that doesn't say which check failed."
-    elif status == PENDING_REVIEW and any(r.get("code") == "AI_UNAVAILABLE" for r in by_sev("review")):
-        bad = [r for r in by_sev("review") if r.get("code") == "AI_UNAVAILABLE"]
-        text = (f"On hold: {len(bad)} document(s) couldn't be read by the AI, so the run can't be completed. "
-                f"Nothing is approved without reading the documents. Re-run the checks once document reading "
-                f"is available.")
-        others = [r for r in by_sev("review") if r.get("code") != "AI_UNAVAILABLE"]
-        if others:
-            text += " Also needs review: " + " ".join(r["message"] for r in others[:2])
     elif status == PENDING_REVIEW:
-        rv = by_sev("review")
-        text = "Needs a human decision. " + " ".join(r["message"] for r in rv[:2])
-        if len(rv) > 2:
-            text += f" (+{len(rv) - 2} more)"
+        # Findings about the vendor come first; a document the AI couldn't read is a problem with our
+        # own run, so it goes last. Otherwise a rate-limited API would bury a real fraud signal.
+        rv = [r for r in by_sev("review") if r.get("code") != "AI_UNAVAILABLE"]
+        unread = [r for r in by_sev("review") if r.get("code") == "AI_UNAVAILABLE"]
+        if rv:
+            text = "Needs a human decision. " + " ".join(r["message"] for r in rv[:2])
+            if len(rv) > 2:
+                text += f" (+{len(rv) - 2} more)"
+        else:
+            text = "Needs a human decision."
+        if unread:
+            text += (f" Separately, {len(unread)} document(s) couldn't be read by the AI, so the run is "
+                     f"incomplete. Nothing is approved without reading the documents: re-run the checks "
+                     f"once document reading is available.")
         fx = by_sev("fixable")
         if fx:
             text += (f" There are also {len(fx)} fixable issue(s); the vendor email is held until a reviewer "
