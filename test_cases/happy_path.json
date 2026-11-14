@@ -1,0 +1,51 @@
+{
+  "case_id": "happy_path",
+  "label": "Happy path - clean Indian company",
+  "version": 1,
+  "parent_case": null,
+  "company": {
+    "legal_name": "Sharma Packaging Pvt Ltd",
+    "trade_name": "Sharma Pack",
+    "business_type": "private_ltd",
+    "country": "IN",
+    "address": "14, 2nd Cross, Peenya Industrial Area",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "pin": "560058"
+  },
+  "contact": {
+    "name": "Rahul Sharma",
+    "email": "rahul@sharmapackaging.in",
+    "phone": "+91 98450 11223"
+  },
+  "tax": {
+    "gst_registered": true,
+    "pan": "AAKCS4821M",
+    "gstin": "29AAKCS4821M1ZS"
+  },
+  "bank": {
+    "account_holder": "SHARMA PACKAGING PRIVATE LIMITED",
+    "account_number": "50100234567890",
+    "ifsc": "HDFC0001234",
+    "bank_name": "HDFC Bank"
+  },
+  "expected": {
+    "status": "Approved",
+    "failing_checks": [],
+    "why": "Every check passes. 'Pvt Ltd' vs 'PRIVATE LIMITED' is normalised before the name match."
+  },
+  "documents": [
+    {
+      "slot": "gst_certificate",
+      "file": "docs/happy_path__gst_certificate.pdf"
+    },
+    {
+      "slot": "bank_proof",
+      "file": "docs/happy_path__cancelled_cheque.pdf"
+    },
+    {
+      "slot": "pan_card",
+      "file": "docs/happy_path__pan_card.pdf"
+    }
+  ]
+}

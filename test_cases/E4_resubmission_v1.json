@@ -1,0 +1,53 @@
+{
+  "case_id": "E4_resubmission_v1",
+  "label": "E4 (v1) - Proprietor uploads a PAN card where the cheque should be",
+  "version": 1,
+  "parent_case": null,
+  "company": {
+    "legal_name": "Kiran Desai",
+    "trade_name": "Kiran Textiles",
+    "business_type": "proprietor",
+    "country": "IN",
+    "address": "Shop 9, Ring Road Textile Market",
+    "city": "Surat",
+    "state": "Gujarat",
+    "pin": "395002"
+  },
+  "contact": {
+    "name": "Kiran Desai",
+    "email": "kirantextiles@gmail.com",
+    "phone": "+91 98250 77889"
+  },
+  "tax": {
+    "gst_registered": true,
+    "pan": "BQRPD6142K",
+    "gstin": "24BQRPD6142K1ZN"
+  },
+  "bank": {
+    "account_holder": "KIRAN TEXTILES",
+    "account_number": "917020045123456",
+    "ifsc": "UTIB0002871",
+    "bank_name": "Axis Bank"
+  },
+  "expected": {
+    "status": "Pending - waiting on vendor",
+    "failing_checks": [
+      "C13"
+    ],
+    "why": "The file in the 'cancelled cheque' slot is actually a PAN card (AI reads the document type). Fixable: email asks for a cheque or bank letter."
+  },
+  "documents": [
+    {
+      "slot": "gst_certificate",
+      "file": "docs/E4_resubmission_v1__gst_certificate.pdf"
+    },
+    {
+      "slot": "bank_proof",
+      "file": "docs/E4_resubmission_v1__cheque_slot_upload.pdf"
+    },
+    {
+      "slot": "pan_card",
+      "file": "docs/E4_resubmission_v1__pan_card.pdf"
+    }
+  ]
+}

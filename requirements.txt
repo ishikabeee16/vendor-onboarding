@@ -1,0 +1,9 @@
+streamlit>=1.50
+pandas
+rapidfuzz
+google-genai
+sqlalchemy>=2.0
+psycopg2-binary
+pypdfium2
+pillow
+reportlab

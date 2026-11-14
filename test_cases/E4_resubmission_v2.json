@@ -1,0 +1,51 @@
+{
+  "case_id": "E4_resubmission_v2",
+  "label": "E4 (v2) - Same proprietor resubmits with the correct cheque",
+  "version": 2,
+  "parent_case": "E4_resubmission_v1",
+  "company": {
+    "legal_name": "Kiran Desai",
+    "trade_name": "Kiran Textiles",
+    "business_type": "proprietor",
+    "country": "IN",
+    "address": "Shop 9, Ring Road Textile Market",
+    "city": "Surat",
+    "state": "Gujarat",
+    "pin": "395002"
+  },
+  "contact": {
+    "name": "Kiran Desai",
+    "email": "kirantextiles@gmail.com",
+    "phone": "+91 98250 77889"
+  },
+  "tax": {
+    "gst_registered": true,
+    "pan": "BQRPD6142K",
+    "gstin": "24BQRPD6142K1ZN"
+  },
+  "bank": {
+    "account_holder": "KIRAN TEXTILES",
+    "account_number": "917020045123456",
+    "ifsc": "UTIB0002871",
+    "bank_name": "Axis Bank"
+  },
+  "expected": {
+    "status": "Approved",
+    "failing_checks": [],
+    "why": "Linked to v1 as version 2. All checks re-run and pass. Account holder matches the trade name, which is accepted for proprietors. Gmail is normal for a proprietor."
+  },
+  "documents": [
+    {
+      "slot": "gst_certificate",
+      "file": "docs/E4_resubmission_v2__gst_certificate.pdf"
+    },
+    {
+      "slot": "bank_proof",
+      "file": "docs/E4_resubmission_v2__cancelled_cheque.pdf"
+    },
+    {
+      "slot": "pan_card",
+      "file": "docs/E4_resubmission_v2__pan_card.pdf"
+    }
+  ]
+}

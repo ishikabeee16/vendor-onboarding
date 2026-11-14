@@ -1,0 +1,56 @@
+{
+  "case_id": "E1_bank_name_mismatch",
+  "label": "E1 - Bank account belongs to a person, not the company",
+  "version": 1,
+  "parent_case": null,
+  "company": {
+    "legal_name": "Green Leaf Foods Pvt Ltd",
+    "trade_name": "",
+    "business_type": "private_ltd",
+    "country": "IN",
+    "address": "Plot 22, SIDCO Industrial Estate, Guindy",
+    "city": "Chennai",
+    "state": "Tamil Nadu",
+    "pin": "600032"
+  },
+  "contact": {
+    "name": "Arjun Mehta",
+    "email": "arjun.mehta.glf@gmail.com",
+    "phone": "+91 98410 55667"
+  },
+  "tax": {
+    "gst_registered": true,
+    "pan": "AABCG7316Q",
+    "gstin": "33AABCG7316Q1ZC"
+  },
+  "bank": {
+    "account_holder": "ARJUN MEHTA",
+    "account_number": "002101558832",
+    "ifsc": "ICIC0004521",
+    "bank_name": "ICICI Bank"
+  },
+  "expected": {
+    "status": "Pending - internal review",
+    "failing_checks": [
+      "C12"
+    ],
+    "info_flags": [
+      "C16"
+    ],
+    "why": "All formats are valid and the cheque matches the form, but the account holder is a person, not the company. Classic fraud pattern, so a human must verify. No vendor email. The Gmail address is noted as info only."
+  },
+  "documents": [
+    {
+      "slot": "gst_certificate",
+      "file": "docs/E1_bank_name_mismatch__gst_certificate.pdf"
+    },
+    {
+      "slot": "bank_proof",
+      "file": "docs/E1_bank_name_mismatch__cancelled_cheque.pdf"
+    },
+    {
+      "slot": "pan_card",
+      "file": "docs/E1_bank_name_mismatch__pan_card.pdf"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "case_id": "E3_foreign_vendor",
+  "label": "E3 - US vendor (kept for later; the app is India-only for now)",
+  "version": 1,
+  "parent_case": null,
+  "company": {
+    "legal_name": "Northwind Supplies Inc",
+    "trade_name": "Northwind",
+    "business_type": "corporation",
+    "country": "US",
+    "address": "455 Harbor Blvd, Suite 300",
+    "city": "Austin",
+    "state": "Texas",
+    "pin": "78701"
+  },
+  "contact": {
+    "name": "Emily Carter",
+    "email": "vendors@northwindsupplies.com",
+    "phone": "+1 512 555 0142"
+  },
+  "tax": {
+    "gst_registered": false,
+    "tax_id_type": "EIN",
+    "tax_id": "84-3920175"
+  },
+  "bank": {
+    "account_holder": "NORTHWIND SUPPLIES INC",
+    "account_number": "4401928374",
+    "routing_number": "312098768",
+    "swift": "FHBKUS44",
+    "bank_name": "First Harbor Bank"
+  },
+  "expected": {
+    "status": "Approved",
+    "failing_checks": [],
+    "why": "Country = US switches the rule set: GSTIN/PAN/IFSC checks are skipped; EIN, SWIFT and ABA routing checks run instead; required docs become incorporation certificate, bank letter and tax residency certificate."
+  },
+  "documents": [
+    {
+      "slot": "incorporation_certificate",
+      "file": "docs/E3_foreign_vendor__incorporation.pdf"
+    },
+    {
+      "slot": "bank_proof",
+      "file": "docs/E3_foreign_vendor__bank_letter.pdf"
+    },
+    {
+      "slot": "tax_residency_certificate",
+      "file": "docs/E3_foreign_vendor__tax_residency.pdf"
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "happy_path__gst_certificate.pdf": {
+    "document_type": "gst_certificate",
+    "readable": true,
+    "fields": {
+      "gstin": "29AAKCS4821M1ZS",
+      "legal_name": "Sharma Packaging Pvt Ltd",
+      "trade_name": "Sharma Pack"
+    }
+  },
+  "happy_path__cancelled_cheque.pdf": {
+    "document_type": "cancelled_cheque",
+    "readable": true,
+    "fields": {
+      "account_number": "50100234567890",
+      "ifsc": "HDFC0001234",
+      "account_holder": "SHARMA PACKAGING PRIVATE LIMITED",
+      "bank_name": "HDFC Bank"
+    }
+  },
+  "happy_path__pan_card.pdf": {
+    "document_type": "pan_card",
+    "readable": true,
+    "fields": {
+      "pan": "AAKCS4821M",
+      "name": "SHARMA PACKAGING PVT LTD"
+    }
+  },
+  "E1_bank_name_mismatch__gst_certificate.pdf": {
+    "document_type": "gst_certificate",
+    "readable": true,
+    "fields": {
+      "gstin": "33AABCG7316Q1ZC",
+      "legal_name": "Green Leaf Foods Pvt Ltd",
+      "trade_name": null
+    }
+  },
+  "E1_bank_name_mismatch__cancelled_cheque.pdf": {
+    "document_type": "cancelled_cheque",
+    "readable": true,
+    "fields": {
+      "account_number": "002101558832",
+      "ifsc": "ICIC0004521",
+      "account_holder": "ARJUN MEHTA",
+      "bank_name": "ICICI Bank"
+    }
+  },
+  "E1_bank_name_mismatch__pan_card.pdf": {
+    "document_type": "pan_card",
+    "readable": true,
+    "fields": {
+      "pan": "AABCG7316Q",
+      "name": "GREEN LEAF FOODS PVT LTD"
+    }
+  },
+  "E2_hidden_inconsistency__gst_certificate.pdf": {
+    "document_type": "gst_certificate",
+    "readable": true,
+    "fields": {
+      "gstin": "27AAKFB5079H1Z6",
+      "legal_name": "Bright Steel Industries LLP",
+      "trade_name": "Bright Steel"
+    }
+  },
+  "E2_hidden_inconsistency__cancelled_cheque.pdf": {
+    "document_type": "cancelled_cheque",
+    "readable": true,
+    "fields": {
+      "account_number": "39847261550",
+      "ifsc": "SBIN0040123",
+      "account_holder": "BRIGHT STEEL INDUSTRIES LLP",
+      "bank_name": "State Bank of India"
+    }
+  },
+  "E2_hidden_inconsistency__pan_card.pdf": {
+    "document_type": "pan_card",
+    "readable": true,
+    "fields": {
+      "pan": "AAKFB5079H",
+      "name": "BRIGHT STEEL INDUSTRIES LLP"
+    }
+  },
+  "E4_resubmission_v1__gst_certificate.pdf": {
+    "document_type": "gst_certificate",
+    "readable": true,
+    "fields": {
+      "gstin": "24BQRPD6142K1ZN",
+      "legal_name": "Kiran Desai",
+      "trade_name": "Kiran Textiles"
+    }
+  },
+  "E4_resubmission_v1__cheque_slot_upload.pdf": {
+    "document_type": "pan_card",
+    "readable": true,
+    "fields": {
+      "pan": "BQRPD6142K",
+      "name": "KIRAN DESAI"
+    }
+  },
+  "E4_resubmission_v1__pan_card.pdf": {
+    "document_type": "pan_card",
+    "readable": true,
+    "fields": {
+      "pan": "BQRPD6142K",
+      "name": "KIRAN DESAI"
+    }
+  },
+  "E4_resubmission_v2__gst_certificate.pdf": {
+    "document_type": "gst_certificate",
+    "readable": true,
+    "fields": {
+      "gstin": "24BQRPD6142K1ZN",
+      "legal_name": "Kiran Desai",
+      "trade_name": "Kiran Textiles"
+    }
+  },
+  "E4_resubmission_v2__cancelled_cheque.pdf": {
+    "document_type": "cancelled_cheque",
+    "readable": true,
+    "fields": {
+      "account_number": "917020045123456",
+      "ifsc": "UTIB0002871",
+      "account_holder": "KIRAN TEXTILES",
+      "bank_name": "Axis Bank"
+    }
+  },
+  "E4_resubmission_v2__pan_card.pdf": {
+    "document_type": "pan_card",
+    "readable": true,
+    "fields": {
+      "pan": "BQRPD6142K",
+      "name": "KIRAN DESAI"
+    }
+  },
+  "backup_duplicate_bank__gst_certificate.pdf": {
+    "document_type": "gst_certificate",
+    "readable": true,
+    "fields": {
+      "gstin": "27AAEFN3307D1ZP",
+      "legal_name": "Nova Traders",
+      "trade_name": null
+    }
+  },
+  "backup_duplicate_bank__cancelled_cheque.pdf": {
+    "document_type": "cancelled_cheque",
+    "readable": true,
+    "fields": {
+      "account_number": "7712345098",
+      "ifsc": "KKBK0000654",
+      "account_holder": "NOVA TRADERS",
+      "bank_name": "Kotak Mahindra Bank"
+    }
+  },
+  "backup_duplicate_bank__pan_card.pdf": {
+    "document_type": "pan_card",
+    "readable": true,
+    "fields": {
+      "pan": "AAEFN3307D",
+      "name": "NOVA TRADERS"
+    }
+  },
+  "backup_blurry_doc__gst_certificate.pdf": {
+    "document_type": "gst_certificate",
+    "readable": true,
+    "fields": {
+      "gstin": "36AAJCS8854R1Z7",
+      "legal_name": "Sunrise Electricals Pvt Ltd",
+      "trade_name": null
+    }
+  },
+  "backup_blurry_doc__cancelled_cheque.jpg": {
+    "document_type": "cancelled_cheque",
+    "readable": false,
+    "fields": {
+      "bank_name": "Canara Bank"
+    }
+  },
+  "backup_blurry_doc__pan_card.pdf": {
+    "document_type": "pan_card",
+    "readable": true,
+    "fields": {
+      "pan": "AAJCS8854R",
+      "name": "SUNRISE ELECTRICALS PVT LTD"
+    }
+  }
+}

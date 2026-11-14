@@ -1,0 +1,53 @@
+{
+  "case_id": "backup_duplicate_bank",
+  "label": "Backup - Bank account already belongs to another vendor",
+  "version": 1,
+  "parent_case": null,
+  "company": {
+    "legal_name": "Nova Traders",
+    "trade_name": "",
+    "business_type": "partnership",
+    "country": "IN",
+    "address": "Unit 5, Bhiwandi Logistics Park",
+    "city": "Thane",
+    "state": "Maharashtra",
+    "pin": "421302"
+  },
+  "contact": {
+    "name": "Sameer Khan",
+    "email": "sameer@novatraders.in",
+    "phone": "+91 98190 22113"
+  },
+  "tax": {
+    "gst_registered": true,
+    "pan": "AAEFN3307D",
+    "gstin": "27AAEFN3307D1ZP"
+  },
+  "bank": {
+    "account_holder": "NOVA TRADERS",
+    "account_number": "7712345098",
+    "ifsc": "KKBK0000654",
+    "bank_name": "Kotak Mahindra Bank"
+  },
+  "expected": {
+    "status": "Rejected",
+    "failing_checks": [
+      "C15"
+    ],
+    "why": "The bank account is already registered to a DIFFERENT existing vendor. Blocker: possible fake vendor. The rejection email gives no detail about which check failed."
+  },
+  "documents": [
+    {
+      "slot": "gst_certificate",
+      "file": "docs/backup_duplicate_bank__gst_certificate.pdf"
+    },
+    {
+      "slot": "bank_proof",
+      "file": "docs/backup_duplicate_bank__cancelled_cheque.pdf"
+    },
+    {
+      "slot": "pan_card",
+      "file": "docs/backup_duplicate_bank__pan_card.pdf"
+    }
+  ]
+}

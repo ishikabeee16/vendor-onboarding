@@ -1,0 +1,55 @@
+{
+  "case_id": "E2_hidden_inconsistency",
+  "label": "E2 - Valid GSTIN, but its state and PAN contradict the form",
+  "version": 1,
+  "parent_case": null,
+  "company": {
+    "legal_name": "Bright Steel Industries LLP",
+    "trade_name": "Bright Steel",
+    "business_type": "llp",
+    "country": "IN",
+    "address": "88, 4th Main, Rajajinagar Industrial Town",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "pin": "560044"
+  },
+  "contact": {
+    "name": "Neha Kulkarni",
+    "email": "accounts@brightsteel.co.in",
+    "phone": "+91 98220 33445"
+  },
+  "tax": {
+    "gst_registered": true,
+    "pan": "AAKFB5079N",
+    "gstin": "27AAKFB5079H1Z6"
+  },
+  "bank": {
+    "account_holder": "BRIGHT STEEL INDUSTRIES LLP",
+    "account_number": "39847261550",
+    "ifsc": "SBIN0040123",
+    "bank_name": "State Bank of India"
+  },
+  "expected": {
+    "status": "Pending - waiting on vendor",
+    "failing_checks": [
+      "C7",
+      "C8",
+      "C14"
+    ],
+    "why": "GSTIN format and checksum pass (C4). But its state code 27 is Maharashtra while the address is Karnataka (C8), and the PAN inside it differs from the PAN field by one character (C7). The PAN card agrees with the GSTIN, so it's a typo -> fixable. One email asks the vendor to correct the PAN and confirm the state."
+  },
+  "documents": [
+    {
+      "slot": "gst_certificate",
+      "file": "docs/E2_hidden_inconsistency__gst_certificate.pdf"
+    },
+    {
+      "slot": "bank_proof",
+      "file": "docs/E2_hidden_inconsistency__cancelled_cheque.pdf"
+    },
+    {
+      "slot": "pan_card",
+      "file": "docs/E2_hidden_inconsistency__pan_card.pdf"
+    }
+  ]
+}

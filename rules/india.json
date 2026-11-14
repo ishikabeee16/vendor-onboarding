@@ -1,0 +1,85 @@
+{
+  "_about": "All India-specific rules live here as data, not code. To change a rule, edit this file. Sources: GST state codes (GSTN), PAN 4th-character holder types (Income Tax Dept), PIN code first-2-digit regions (India Post).",
+
+  "business_types": {
+    "private_ltd": "Private Limited Company",
+    "public_ltd": "Public Limited Company",
+    "llp": "Limited Liability Partnership",
+    "partnership": "Partnership Firm",
+    "proprietor": "Sole Proprietorship"
+  },
+
+  "required_fields": [
+    "company.legal_name", "company.business_type", "company.address", "company.city",
+    "company.state", "company.pin", "contact.name", "contact.email", "contact.phone",
+    "tax.pan", "bank.account_holder", "bank.account_number", "bank.ifsc", "bank.bank_name"
+  ],
+  "required_fields_if_gst_registered": ["tax.gstin"],
+  "required_fields_by_business_type": {
+    "proprietor": ["company.trade_name"]
+  },
+
+  "required_documents": ["pan_card", "bank_proof"],
+  "required_documents_if_gst_registered": ["gst_certificate"],
+  "required_documents_if_not_gst_registered": ["gst_declaration"],
+
+  "document_slots": {
+    "gst_certificate": {"label": "GST registration certificate", "accepts": ["gst_certificate"]},
+    "gst_declaration": {"label": "GST non-registration declaration", "accepts": ["gst_declaration"]},
+    "pan_card": {"label": "PAN card", "accepts": ["pan_card"]},
+    "bank_proof": {"label": "Cancelled cheque or bank letter", "accepts": ["cancelled_cheque", "bank_letter"]}
+  },
+
+  "pan_holder_type": {
+    "C": "Company", "F": "Firm / LLP", "P": "Individual", "H": "Hindu Undivided Family",
+    "A": "Association of Persons", "T": "Trust", "B": "Body of Individuals",
+    "L": "Local Authority", "J": "Artificial Juridical Person", "G": "Government"
+  },
+  "expected_pan_type_by_business_type": {
+    "private_ltd": ["C"], "public_ltd": ["C"], "llp": ["F"], "partnership": ["F"], "proprietor": ["P"]
+  },
+
+  "gst_state_codes": {
+    "01": "Jammu and Kashmir", "02": "Himachal Pradesh", "03": "Punjab", "04": "Chandigarh",
+    "05": "Uttarakhand", "06": "Haryana", "07": "Delhi", "08": "Rajasthan", "09": "Uttar Pradesh",
+    "10": "Bihar", "11": "Sikkim", "12": "Arunachal Pradesh", "13": "Nagaland", "14": "Manipur",
+    "15": "Mizoram", "16": "Tripura", "17": "Meghalaya", "18": "Assam", "19": "West Bengal",
+    "20": "Jharkhand", "21": "Odisha", "22": "Chhattisgarh", "23": "Madhya Pradesh", "24": "Gujarat",
+    "26": "Dadra and Nagar Haveli and Daman and Diu", "27": "Maharashtra", "29": "Karnataka",
+    "30": "Goa", "31": "Lakshadweep", "32": "Kerala", "33": "Tamil Nadu", "34": "Puducherry",
+    "35": "Andaman and Nicobar Islands", "36": "Telangana", "37": "Andhra Pradesh", "38": "Ladakh"
+  },
+
+  "pin_prefix_states": {
+    "11": ["Delhi"],
+    "12": ["Haryana"], "13": ["Haryana", "Punjab"],
+    "14": ["Punjab"], "15": ["Punjab"], "16": ["Punjab", "Chandigarh", "Haryana"],
+    "17": ["Himachal Pradesh"],
+    "18": ["Jammu and Kashmir"], "19": ["Jammu and Kashmir", "Ladakh"],
+    "20": ["Uttar Pradesh"], "21": ["Uttar Pradesh"], "22": ["Uttar Pradesh"], "23": ["Uttar Pradesh"],
+    "24": ["Uttar Pradesh", "Uttarakhand"], "25": ["Uttar Pradesh"], "26": ["Uttar Pradesh", "Uttarakhand"],
+    "27": ["Uttar Pradesh"], "28": ["Uttar Pradesh"],
+    "30": ["Rajasthan"], "31": ["Rajasthan"], "32": ["Rajasthan"], "33": ["Rajasthan"], "34": ["Rajasthan"],
+    "36": ["Gujarat"], "37": ["Gujarat"], "38": ["Gujarat"],
+    "39": ["Gujarat", "Dadra and Nagar Haveli and Daman and Diu"],
+    "40": ["Maharashtra", "Goa"], "41": ["Maharashtra"], "42": ["Maharashtra"], "43": ["Maharashtra"], "44": ["Maharashtra"],
+    "45": ["Madhya Pradesh"], "46": ["Madhya Pradesh"], "47": ["Madhya Pradesh"], "48": ["Madhya Pradesh"],
+    "49": ["Chhattisgarh"],
+    "50": ["Telangana", "Andhra Pradesh"], "51": ["Andhra Pradesh"], "52": ["Andhra Pradesh"], "53": ["Andhra Pradesh"],
+    "56": ["Karnataka"], "57": ["Karnataka"], "58": ["Karnataka"], "59": ["Karnataka"],
+    "60": ["Tamil Nadu", "Puducherry"], "61": ["Tamil Nadu"], "62": ["Tamil Nadu"], "63": ["Tamil Nadu"], "64": ["Tamil Nadu"],
+    "67": ["Kerala"], "68": ["Kerala", "Lakshadweep"], "69": ["Kerala"],
+    "70": ["West Bengal"], "71": ["West Bengal"], "72": ["West Bengal"], "73": ["West Bengal", "Sikkim"],
+    "74": ["West Bengal", "Andaman and Nicobar Islands"],
+    "75": ["Odisha"], "76": ["Odisha"], "77": ["Odisha"],
+    "78": ["Assam"],
+    "79": ["Arunachal Pradesh", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Tripura", "Assam"],
+    "80": ["Bihar"], "81": ["Bihar", "Jharkhand"], "82": ["Bihar", "Jharkhand"], "83": ["Jharkhand"],
+    "84": ["Bihar"], "85": ["Bihar", "Jharkhand"]
+  },
+
+  "free_email_domains": ["gmail.com", "yahoo.com", "yahoo.co.in", "hotmail.com", "outlook.com",
+                          "rediffmail.com", "icloud.com", "proton.me", "protonmail.com", "live.com"],
+
+  "name_match": {"pass_at": 90, "review_below": 70}
+}

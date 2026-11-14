@@ -1,0 +1,53 @@
+{
+  "case_id": "backup_blurry_doc",
+  "label": "Backup - Cheque photo is blurry and rotated",
+  "version": 1,
+  "parent_case": null,
+  "company": {
+    "legal_name": "Sunrise Electricals Pvt Ltd",
+    "trade_name": "",
+    "business_type": "private_ltd",
+    "country": "IN",
+    "address": "3-45, IDA Balanagar",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "pin": "500037"
+  },
+  "contact": {
+    "name": "Priya Reddy",
+    "email": "priya@sunriseelectricals.in",
+    "phone": "+91 98490 66778"
+  },
+  "tax": {
+    "gst_registered": true,
+    "pan": "AAJCS8854R",
+    "gstin": "36AAJCS8854R1Z7"
+  },
+  "bank": {
+    "account_holder": "SUNRISE ELECTRICALS PRIVATE LIMITED",
+    "account_number": "1234101998877",
+    "ifsc": "CNRB0003310",
+    "bank_name": "Canara Bank"
+  },
+  "expected": {
+    "status": "Pending - waiting on vendor",
+    "failing_checks": [
+      "C13"
+    ],
+    "why": "The AI can't read the cheque confidently. Instead of guessing, the process asks the vendor to re-upload a clearer copy."
+  },
+  "documents": [
+    {
+      "slot": "gst_certificate",
+      "file": "docs/backup_blurry_doc__gst_certificate.pdf"
+    },
+    {
+      "slot": "bank_proof",
+      "file": "docs/backup_blurry_doc__cancelled_cheque.jpg"
+    },
+    {
+      "slot": "pan_card",
+      "file": "docs/backup_blurry_doc__pan_card.pdf"
+    }
+  ]
+}
