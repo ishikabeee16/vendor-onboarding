@@ -103,8 +103,13 @@ def engine():
     global _engine
     if _engine is None:
         url = _database_url()
-        if url.startswith("postgres://"):       # some providers give this older prefix
-            url = url.replace("postgres://", "postgresql://", 1)
+        # Hosted providers hand out URLs like "postgresql://user:pass@host/db". Name the driver
+        # explicitly (psycopg 3), because different SQLAlchemy versions pick different defaults for
+        # a bare "postgresql://" and the wrong default fails at connect time.
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                url = "postgresql+psycopg://" + url[len(prefix):]
+                break
         _engine = create_engine(url, pool_pre_ping=True)
         metadata.create_all(_engine)            # creates the tables the first time
     return _engine
