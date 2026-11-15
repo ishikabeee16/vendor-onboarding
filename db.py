@@ -17,10 +17,12 @@ Same code for both, thanks to SQLAlchemy. If you know SQL: these are just 5 tabl
 
 import json
 import os
+import threading
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy import (Column, DateTime, Float, ForeignKey, Integer, LargeBinary, MetaData, String,
-                        Table, Text, create_engine, func, insert, select, update)
+                        Table, Text, create_engine, func, insert, select, text, update)
 
 metadata = MetaData()
 
@@ -97,21 +99,42 @@ def _database_url():
 
 
 _engine = None
+_engine_lock = threading.Lock()
+
+
+def _create_tables(eng):
+    """Create the tables the first time. Several visitors can open the app at the same moment,
+    and each one may try this at once: on Postgres we take a lock first so exactly one of them
+    does the creating, instead of two colliding half-way through."""
+    try:
+        if eng.dialect.name == "postgresql":
+            with eng.begin() as conn:
+                conn.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": 727412})
+                metadata.create_all(conn)
+        else:
+            metadata.create_all(eng)
+    except (IntegrityError, ProgrammingError):
+        # Belt and braces: if another worker still beat us to it, the tables now exist, which is
+        # all we wanted. Confirm that, and only complain if something else is actually wrong.
+        metadata.create_all(eng, checkfirst=True)
 
 
 def engine():
     global _engine
     if _engine is None:
-        url = _database_url()
-        # Hosted providers hand out URLs like "postgresql://user:pass@host/db". Name the driver
-        # explicitly (psycopg 3), because different SQLAlchemy versions pick different defaults for
-        # a bare "postgresql://" and the wrong default fails at connect time.
-        for prefix in ("postgres://", "postgresql://"):
-            if url.startswith(prefix):
-                url = "postgresql+psycopg://" + url[len(prefix):]
-                break
-        _engine = create_engine(url, pool_pre_ping=True)
-        metadata.create_all(_engine)            # creates the tables the first time
+        with _engine_lock:                       # and the same guard within one worker
+            if _engine is None:
+                url = _database_url()
+                # Hosted providers hand out URLs like "postgresql://user:pass@host/db". Name the
+                # driver explicitly (psycopg 3), because different SQLAlchemy versions pick
+                # different defaults for a bare "postgresql://" and the wrong one fails at connect.
+                for prefix in ("postgres://", "postgresql://"):
+                    if url.startswith(prefix):
+                        url = "postgresql+psycopg://" + url[len(prefix):]
+                        break
+                eng = create_engine(url, pool_pre_ping=True)
+                _create_tables(eng)
+                _engine = eng                    # only published once the tables are really there
     return _engine
 
 
