@@ -89,9 +89,22 @@ def fingerprint(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+_CLIENTS = {}
+
+
 def _client():
+    """One client per API key, kept for the life of the process.
+
+    This must be cached. A client created fresh for each call is the only thing referring to its
+    network connection, so Python can collect it while the request is still in flight, and the
+    call then fails with "Cannot send a request, as the client has been closed".
+    """
     from google import genai
-    return genai.Client(api_key=_secret("GEMINI_API_KEY"))
+    key = _secret("GEMINI_API_KEY")
+    if key not in _CLIENTS:
+        _CLIENTS.clear()
+        _CLIENTS[key] = genai.Client(api_key=key)
+    return _CLIENTS[key]
 
 
 def _call_gemini(contents, schema=None, retries=3):
@@ -105,7 +118,8 @@ def _call_gemini(contents, schema=None, retries=3):
     last_err = None
     for attempt in range(retries):
         try:
-            resp = _client().models.generate_content(model=model_name(), contents=contents, config=config)
+            client = _client()   # a local name keeps it alive for the whole request
+            resp = client.models.generate_content(model=model_name(), contents=contents, config=config)
             return json.loads(resp.text)
         except Exception as e:  # network error, rate limit, bad JSON...
             last_err = e
