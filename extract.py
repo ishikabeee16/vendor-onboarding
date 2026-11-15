@@ -118,10 +118,13 @@ def _client():
     call then fails with "Cannot send a request, as the client has been closed".
     """
     from google import genai
+    from google.genai import types
     key = _secret("GEMINI_API_KEY")
     if key not in _CLIENTS:
         _CLIENTS.clear()
-        _CLIENTS[key] = genai.Client(api_key=key)
+        # Give up after 45 seconds. Without this a stuck call hangs the run for ever, and a
+        # spinner that never stops is worse than a clear "couldn't read it, please retry".
+        _CLIENTS[key] = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=45_000))
     return _CLIENTS[key]
 
 
