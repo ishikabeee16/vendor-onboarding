@@ -5,7 +5,7 @@ extract.py - the AI part. It does exactly two jobs:
 
 AI never decides the status. It reads; checks.py compares; decide.py decides.
 
-Model: Google Gemini (free tier). Set GEMINI_API_KEY (and optionally GEMINI_MODEL) in
+Model: Google Gemini. Set GEMINI_API_KEY (and optionally GEMINI_MODEL) in
 .streamlit/secrets.toml locally, or in the Streamlit Cloud "Secrets" box.
 
 Results are cached by the file's fingerprint (SHA-256), so the same document is never
@@ -17,7 +17,10 @@ import json
 import os
 import time
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+# Google retires older models, and a name that works today can stop working for new API keys
+# later. So we keep a list, newest first, try them in order, and remember the one that answers.
+MODEL_CANDIDATES = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"]
+DEFAULT_MODEL = MODEL_CANDIDATES[0]
 
 DOC_PROMPT = """You are reading a document uploaded during vendor onboarding at an Indian company.
 
@@ -77,8 +80,23 @@ def _secret(name, default=None):
     return os.environ.get(name, default)
 
 
+_working_model = None
+
+
 def model_name():
-    return _secret("GEMINI_MODEL", DEFAULT_MODEL)
+    """The model we're actually using: whichever one answered last, else the configured one."""
+    return _working_model or _secret("GEMINI_MODEL", DEFAULT_MODEL)
+
+
+def _models_to_try():
+    """The configured model first, then the rest as fallbacks, without repeats."""
+    order = [model_name()] + MODEL_CANDIDATES
+    seen, out = set(), []
+    for m in order:
+        if m and m not in seen:
+            seen.add(m)
+            out.append(m)
+    return out
 
 
 def ai_available():
@@ -115,18 +133,24 @@ def _call_gemini(contents, schema=None, retries=3):
         response_mime_type="application/json",
         **({"response_schema": schema} if schema else {}),
     )
+    global _working_model
     last_err = None
-    for attempt in range(retries):
-        try:
-            client = _client()   # a local name keeps it alive for the whole request
-            resp = client.models.generate_content(model=model_name(), contents=contents, config=config)
-            return json.loads(resp.text)
-        except Exception as e:  # network error, rate limit, bad JSON...
-            last_err = e
-            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e) or "503" in str(e):
-                time.sleep(4 * (attempt + 1))
-                continue
-            break
+    for model in _models_to_try():
+        for attempt in range(retries):
+            try:
+                client = _client()   # a local name keeps it alive for the whole request
+                resp = client.models.generate_content(model=model, contents=contents, config=config)
+                _working_model = model      # remember it, so later calls skip the dead ones
+                return json.loads(resp.text)
+            except Exception as e:  # network error, rate limit, retired model, bad JSON...
+                last_err = e
+                msg = str(e)
+                if "429" in msg or "RESOURCE_EXHAUSTED" in msg or "503" in msg:
+                    time.sleep(4 * (attempt + 1))
+                    continue
+                break
+        if not ("404" in str(last_err) or "NOT_FOUND" in str(last_err)):
+            break                           # a real failure, not "this model is gone"
     raise RuntimeError(f"{type(last_err).__name__}: {str(last_err)[:200]}")
 
 
