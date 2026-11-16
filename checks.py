@@ -358,7 +358,12 @@ def c12_account_holder_name(sub, ctx):
     if not holder or not legal:
         return skip("C12", 3, name, "Needs account holder and legal name first.")
     scores = {"legal name": name_score(holder, legal)}
-    if trade:
+    # The trade name is typed in by the vendor, so it is weak evidence. We only accept it for a
+    # genuine sole proprietor (business type = proprietor AND a personal PAN), whose bank account
+    # is often in the shop's name. For companies, the account must match the LEGAL name.
+    pan = clean_id(get(sub, "tax.pan"))
+    is_proprietor = get(sub, "company.business_type") == "proprietor" and PAN_RE.match(pan) and pan[3] == "P"
+    if trade and is_proprietor:
         scores["trade name"] = name_score(holder, trade)
     best_against, best = max(scores.items(), key=lambda kv: kv[1])
     target = legal if best_against == "legal name" else trade
@@ -405,16 +410,23 @@ def c13_document_type(sub, ctx):
             continue
         conf = ex.get("confidence", 0)
         if not ex.get("readable", True) or conf < MIN_CONFIDENCE:
+            second = ex.get("second_read") or {}
+            why = (f"it was read twice and the two readings disagreed on the "
+                   f"{', '.join(x.replace('_', ' ') for x in second['differs_on'])}"
+                   if second.get("differs_on") else f"the AI could not read it clearly (confidence {conf:.0%})")
             results.append(fail("C13", 4, name, "fixable", "UNREADABLE_DOC",
-                                f"The {label} is too unclear to read reliably (AI confidence {conf:.0%}). "
-                                f"Asking for a re-upload instead of guessing.",
+                                f"The {label} can't be trusted: {why}. "
+                                f"Asking for a clearer copy instead of guessing.",
                                 f"Your {label} is too blurry or unclear for us to read. Please upload a clear, "
                                 f"straight scan or PDF.", slot=slot, confidence=conf))
             continue
         dtype = ex.get("document_type")
         if dtype in slot_rules["accepts"]:
+            agrees = (ex.get("second_read") or {}).get("agrees")
+            checked = ("Read twice; both readings agree." if agrees
+                       else "Second reading wasn't available, so this is a single reading.")
             results.append(ok("C13", 4, name, f"AI identified it as a {dtype.replace('_', ' ')} "
-                              f"(confidence {conf:.0%}).", slot=slot, confidence=conf))
+                              f"(confidence {conf:.0%}). {checked}", slot=slot, confidence=conf))
         else:
             got = (dtype or "unknown document").replace("_", " ")
             results.append(fail("C13", 4, name, "fixable", "WRONG_DOC",
@@ -524,6 +536,14 @@ def c15_duplicate_vendor(sub, ctx):
                     f"Bank account {acct} is already registered to a different vendor: {v['legal_name']} "
                     f"({v['vendor_id']}). Two businesses don't share a bank account; possible fake vendor.",
                     matched_vendor=v["vendor_id"])
+    for o in ctx.get("open_submissions", []):
+        if acct and clean_id(o.get("account_number")) == acct and clean_id(o.get("ifsc"))[:4] == ifsc[:4] \
+                and clean_id(o.get("pan")) != pan:
+            return fail("C15", 5, name, "review", "DUPLICATE_BANK_ACCOUNT",
+                        f"Bank account {acct} is also on another submission still in progress: "
+                        f"{o['legal_name']} ({o['request_ref']}, {o['status']}). Two different businesses "
+                        f"giving the same account needs a human look before either is approved.",
+                        matched_request=o["request_ref"])
     if same_identity:
         v = same_identity[0]
         return fail("C15", 5, name, "review", "DUPLICATE_VENDOR",

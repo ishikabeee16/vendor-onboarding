@@ -9,6 +9,7 @@ The same function also runs from the terminal (tests/run_cases.py) with emit=pri
 """
 
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import checks
 import db
@@ -29,17 +30,37 @@ def _worst(results):
 
 
 def run_pipeline(submission_id, emit=lambda *a: None, reader=None, name_judge=None, pause=STEP_PAUSE):
+    """Run every stage for one submission and save the result. Returns the run id.
+
+    The run is written to the database first, marked "Running", and updated at the end. If
+    anything goes wrong in the middle, it is recorded as "Did not finish" with the reason, so a
+    submission can never silently vanish.
+    """
+    run_id = db.start_run(submission_id)
+    started = db.now()
+    try:
+        return _run(run_id, started, submission_id, emit, reader, name_judge, pause)
+    except Exception as e:                      # record the failure, then let the screen show it
+        db.finish_run(run_id, started, db.DID_NOT_FINISH,
+                      f"The checks stopped before finishing ({type(e).__name__}: {str(e)[:200]}). "
+                      f"Nothing was decided. Re-run the checks.", ["RUN_FAILED"], [], {}, None, None)
+        raise
+
+
+def _run(run_id, started, submission_id, emit, reader, name_judge, pause):
     reader = reader or extract.read_document
     name_judge = name_judge if name_judge is not None else extract.judge_names
-    started = db.now()
     sub = db.get_submission(submission_id)
     payload = dict(sub["payload"])
     payload["documents"] = [{"slot": d["slot"], "file": d["filename"]} for d in sub["documents"]]
+    is_real = sub["source"] == "form"           # demo test cases don't count as real vendors
 
     ctx = {
         "name_judge": name_judge,
         # vendors approved earlier through this app, except earlier versions of this same request
         "approved_vendors": [v for v in db.approved_vendors() if v["request_ref"] != sub["request_ref"]],
+        # other real submissions still in progress (so two pending ones can notice each other)
+        "open_submissions": db.open_submissions(exclude_ref=sub["request_ref"]) if is_real else [],
         "extractions": {},
     }
     all_results = []
@@ -61,15 +82,26 @@ def run_pipeline(submission_id, emit=lambda *a: None, reader=None, name_judge=No
     for stage_no in (1, 2, 3):
         run_stage(stage_no, checks.RULE_STAGES[stage_no])
 
-    # Stage 4: the AI reads each document, then code compares
+    # Stage 4: the AI reads each document (all documents at the same time, to save waiting),
+    # then code compares what it read with the form.
     emit("stage_start", 4, checks.STAGES[4])
     cache = db.Cache()
-    for doc in sub["documents"]:
-        label = checks.RULES["document_slots"].get(doc["slot"], {"label": doc["slot"]})["label"]
-        emit("doc_read_start", doc["slot"], label, doc["filename"])
-        ex = reader(doc["content"], doc["mime_type"], cache=cache)
-        ctx["extractions"][doc["slot"]] = ex
-        emit("doc_read_done", doc["slot"], label, ex)
+    docs = sub["documents"]
+    labels = {d["slot"]: checks.RULES["document_slots"].get(d["slot"], {"label": d["slot"]})["label"] for d in docs}
+    for d in docs:
+        emit("doc_read_start", d["slot"], labels[d["slot"]], d["filename"])
+    if reader is extract.read_document:
+        extract.ai_available()                  # load settings on this thread before the workers start
+    with ThreadPoolExecutor(max_workers=max(1, len(docs))) as pool:
+        futures = {pool.submit(reader, d["content"], d["mime_type"], cache=cache): d["slot"] for d in docs}
+        for fut in as_completed(futures):
+            slot = futures[fut]
+            try:
+                ex = fut.result()
+            except Exception as e:              # one document failing must not sink the others
+                ex = {"error": f"{type(e).__name__}: {str(e)[:150]}"}
+            ctx["extractions"][slot] = ex
+            emit("doc_read_done", slot, labels[slot], ex)
     stage4 = []
     for fn in checks.DOC_CHECKS:
         for r in fn(payload, ctx):
@@ -90,7 +122,7 @@ def run_pipeline(submission_id, emit=lambda *a: None, reader=None, name_judge=No
     summ = decide.summary(status, all_results, name)
     email = decide.vendor_email(status, all_results, payload, sub["request_ref"], vendor_id)
     codes = decide.reason_codes(all_results)
-    run_id = db.save_run(submission_id, started, status, summ, codes, all_results,
-                         ctx["extractions"], email, vendor_id)
+    extractions = {d["slot"]: ctx["extractions"].get(d["slot"], {}) for d in docs}   # keep upload order
+    db.finish_run(run_id, started, status, summ, codes, all_results, extractions, email, vendor_id)
     emit("done", run_id, status, summ, email)
     return run_id

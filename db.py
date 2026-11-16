@@ -15,6 +15,8 @@ Same code for both, thanks to SQLAlchemy. If you know SQL: these are just 5 tabl
   extraction_cache what the AI read off each file, so the same file is never sent to the AI twice
 """
 
+import hashlib
+import hmac
 import json
 import os
 import threading
@@ -176,6 +178,39 @@ def save_run(submission_id, started_at, status, summary, reason_codes, checks, e
         )).inserted_primary_key[0]
 
 
+RUNNING = "Running"
+DID_NOT_FINISH = "Did not finish"
+
+
+def start_run(submission_id):
+    """Write the run down BEFORE doing any work, marked 'Running'. If the app crashes or restarts
+    half-way, the submission still shows on the dashboard instead of silently disappearing."""
+    with engine().begin() as conn:
+        return conn.execute(insert(runs).values(
+            submission_id=submission_id, started_at=now(), status=RUNNING,
+            summary="Checks are running.", reason_codes="[]", checks="[]", extractions="{}", email="null",
+        )).inserted_primary_key[0]
+
+
+def finish_run(run_id, started_at, status, summary, reason_codes, checks, extractions, email, vendor_id):
+    finished = now()
+    with engine().begin() as conn:
+        conn.execute(update(runs).where(runs.c.id == run_id).values(
+            finished_at=finished, seconds=round((finished - started_at).total_seconds(), 1),
+            status=status, summary=summary, reason_codes=json.dumps(reason_codes),
+            checks=json.dumps(checks), extractions=json.dumps(extractions), email=json.dumps(email),
+            vendor_id=vendor_id))
+
+
+def shown_status(status, started_at):
+    """A run still marked 'Running' long after it started was cut off (app restart, crash)."""
+    if status == RUNNING and started_at is not None:
+        started = started_at if started_at.tzinfo else started_at.replace(tzinfo=timezone.utc)
+        if (now() - started).total_seconds() > 180:
+            return DID_NOT_FINISH
+    return status
+
+
 def save_override(run_id, new_status, reason, reviewer):
     with engine().begin() as conn:
         conn.execute(insert(overrides).values(run_id=run_id, new_status=new_status, reason=reason,
@@ -232,7 +267,7 @@ def final_status(run):
     """The latest human override wins; otherwise the process's own decision."""
     if run.get("overrides"):
         return run["overrides"][-1]["new_status"]
-    return run["status"]
+    return shown_status(run["status"], run.get("started_at"))
 
 
 def list_runs():
@@ -255,7 +290,7 @@ def list_runs():
         d = dict(r)
         d["reason_codes"] = json.loads(d["reason_codes"] or "[]")
         o = last_override.get(d["run_id"])
-        d["final_status"] = o["new_status"] if o else d["status"]
+        d["final_status"] = o["new_status"] if o else shown_status(d["status"], d["started_at"])
         d["overridden"] = bool(o)
         out.append(d)
     return out
@@ -273,6 +308,40 @@ def approved_vendors():
                         "account_number": p["bank"].get("account_number", ""),
                         "ifsc": p["bank"].get("ifsc", ""), "request_ref": r["request_ref"]})
     return out
+
+
+def open_submissions(exclude_ref=None):
+    """Real (form) submissions that are NOT approved yet: the latest version of each request.
+    Used so two not-yet-approved submissions sharing a bank account notice each other."""
+    seen, out = set(), []
+    for r in list_runs():                       # newest first
+        if r["request_ref"] in seen:
+            continue
+        seen.add(r["request_ref"])
+        if r["source"] != "form" or r["request_ref"] == exclude_ref or r["final_status"] == "Approved":
+            continue
+        p = get_submission(r["submission_id"])["payload"]
+        out.append({"request_ref": r["request_ref"], "legal_name": r["vendor_name"],
+                    "pan": p["tax"].get("pan", ""), "account_number": p["bank"].get("account_number", ""),
+                    "ifsc": p["bank"].get("ifsc", ""), "status": r["final_status"]})
+    return out
+
+
+def access_code(request_ref):
+    """A short private code for one request, shown to the vendor when they submit. A vendor needs
+    reference + code to see their status, so knowing (or guessing) a reference number is not
+    enough to look at someone else's submission. It is derived from a secret, not stored."""
+    secret = (os.environ.get("APP_SECRET") or _database_url()).encode()
+    digest = hmac.new(secret, request_ref.strip().upper().encode(), hashlib.sha256).hexdigest().upper()
+    return f"{digest[:4]}-{digest[4:8]}"
+
+
+def find_by_ref(request_ref):
+    """Latest version of a request, looked up by its reference (e.g. REQ-0007). None if unknown."""
+    with engine().connect() as conn:
+        row = conn.execute(select(submissions.c.id).where(submissions.c.request_ref == request_ref.strip().upper())
+                           .order_by(submissions.c.version.desc())).first()
+    return row[0] if row else None
 
 
 def latest_submission_for_case(case_id):

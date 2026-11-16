@@ -20,6 +20,27 @@ PENDING_REVIEW = "Pending - internal review"
 REJECTED = "Rejected"
 ALL_STATUSES = [APPROVED, PENDING_VENDOR, PENDING_REVIEW, REJECTED]
 
+# Reason codes in plain words (the dashboard shows these next to the code).
+REASON_TEXT = {
+    "MISSING_FIELD": "A required field was left empty",
+    "MISSING_DOC": "A required document was not uploaded",
+    "WRONG_DOC": "The wrong document was uploaded",
+    "UNREADABLE_DOC": "A document was too unclear to read",
+    "INVALID_FORMAT": "A number has the wrong format (PAN, GSTIN, IFSC, account, PIN, email)",
+    "UNKNOWN_IFSC": "The IFSC is not a real bank branch",
+    "PAN_GSTIN_MISMATCH": "The PAN and the GSTIN do not belong together",
+    "PAN_TYPE_MISMATCH": "The PAN type does not fit the business type",
+    "STATE_MISMATCH": "The state, GSTIN and PIN code disagree",
+    "BANK_MISMATCH": "The IFSC belongs to a different bank than named",
+    "BANK_NAME_MISMATCH": "The bank account is not in the vendor's name",
+    "DOC_FIELD_MISMATCH": "A document says something different from the form",
+    "DUPLICATE_VENDOR": "This vendor may already exist",
+    "DUPLICATE_BANK_ACCOUNT": "Another vendor uses the same bank account",
+    "FREE_EMAIL_DOMAIN": "Free email address used by a company (note only)",
+    "AI_UNAVAILABLE": "Document reading was not available",
+    "RUN_FAILED": "The checks did not finish",
+}
+
 BUYER = "Acme Retail Pvt Ltd"
 PROCUREMENT_EMAIL = "vendor-onboarding@acmeretail.example"
 
@@ -129,3 +150,26 @@ def vendor_email(status, results, payload, request_ref, vendor_id=None):
                     f"before we can approve it:\n\n{lines}\n\nPlease update your submission (reference "
                     f"{request_ref}). Everything else is already verified, so you won't need to re-enter it.\n\n"
                     f"Regards,\nVendor Onboarding Team, {BUYER}"}
+
+
+def vendor_view(status, results, request_ref, vendor_id=None):
+    """What the VENDOR is allowed to see. Deliberately much less than the team sees:
+    no check names, no reason codes, and above all nothing about fraud or review reasons.
+    Telling a fraudster which check caught them teaches them what to change next time."""
+    if status == APPROVED:
+        return {"tone": "good", "title": "Approved",
+                "message": f"Your registration is approved. Your vendor ID is {vendor_id}. "
+                           f"Please quote it on every invoice.", "fixes": []}
+    if status == PENDING_VENDOR:
+        fixes = vendor_fixes(results)
+        return {"tone": "action", "title": "We need a few corrections from you",
+                "message": f"Please fix the {len(fixes)} item(s) below and resubmit. Everything else is fine, "
+                           f"so you won't need to re-enter it.", "fixes": fixes}
+    if status == REJECTED:
+        return {"tone": "stop", "title": "We couldn't complete this registration",
+                "message": f"If you think this is a mistake, please contact {PROCUREMENT_EMAIL} "
+                           f"and quote reference {request_ref}.", "fixes": []}
+    # Internal review, still running, or did not finish: the vendor just sees "we're on it".
+    return {"tone": "wait", "title": "Received - under review",
+            "message": "Thank you. Our team is reviewing your registration and will contact you if "
+                       "anything else is needed. You don't need to do anything right now.", "fixes": []}

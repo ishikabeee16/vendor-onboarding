@@ -20,12 +20,16 @@ STATUS_STYLE = {
     decide.PENDING_VENDOR: ("#9A6700", "#FFF6DD", "↺"),
     decide.PENDING_REVIEW: ("#B4560B", "#FDEEE2", "!"),
     decide.REJECTED: ("#B42318", "#FDECEA", "✕"),
+    "Running": ("#175CD3", "#EFF4FF", "◐"),
+    "Did not finish": ("#475467", "#F2F4F7", "?"),
 }
 NEXT_STEP = {
     decide.APPROVED: "Nothing to do. The vendor has a vendor ID and can be paid.",
     decide.PENDING_VENDOR: "Send the drafted email. The vendor fixes the issues and resubmits.",
     decide.PENDING_REVIEW: "A reviewer must look at the evidence below and approve or reject.",
     decide.REJECTED: "Send the neutral rejection email. No further action.",
+    "Running": "The checks are still running. Refresh in a moment.",
+    "Did not finish": "The checks were cut off before a decision. Open the submission and re-run them.",
 }
 SEVERITY_TAG = {
     "fixable": ("Vendor to fix", "#9A6700", "#FFF6DD"),
@@ -128,15 +132,48 @@ def stage_header_html(no, name, state):
 
 
 def ai_box_html(label, ex):
+    """What the AI read off one document, how sure it was, and whether a second reading agreed."""
+    if not ex:
+        return f'<div class="vo-ai"><b>{esc(label)}</b>: not read yet.</div>'
     if ex.get("error"):
-        return f'<div class="vo-ai">🤖 <b>{esc(label)}</b>: could not be read — {esc(ex["error"])}</div>'
+        return (f'<div class="vo-ai"><b>{esc(label)}</b>: could not be read right now. '
+                f'<span class="vo-muted">{esc(ex["error"])}</span></div>')
     fields = ex.get("fields", {})
-    rows = " · ".join(f"<b>{esc(k.replace('_', ' '))}</b>: {esc(v)}" for k, v in fields.items()) or "no fields found"
-    how = "from cache (read before)" if ex.get("cached") else f"read in {ex.get('seconds', '?')}s"
-    return (f'<div class="vo-ai">🤖 <b>{esc(label)}</b> → AI says it\'s a '
+    rows = " · ".join(f"<b>{esc(k.replace('_', ' '))}</b>: {esc(v)}" for k, v in fields.items()) or "no details found"
+    how = "read earlier, reused" if ex.get("cached") else f"read in {ex.get('seconds', '?')}s"
+    second = ex.get("second_read") or {}
+    if second.get("agrees"):
+        check = '<br><span style="color:#1B7F4B;">✓ Read twice. Both readings agree on every key number.</span>'
+    elif second.get("differs_on"):
+        other = ", ".join(f"{esc(k.replace('_', ' '))}: {esc(v)}" for k, v in second.get("values", {}).items())
+        check = (f'<br><span style="color:#B4560B;">⚠ Read twice and the readings disagree on '
+                 f'{esc(", ".join(x.replace("_", " ") for x in second["differs_on"]))}. '
+                 f'Second reading said: {other or "nothing"}. Not trusted.</span>')
+    else:
+        check = '<br><span class="vo-muted">Single reading (second reading was not available).</span>'
+    return (f'<div class="vo-ai"><b>{esc(label)}</b> → the AI says this is a '
             f'<b>{esc((ex.get("document_type") or "?").replace("_", " "))}</b>, '
-            f'confidence <b>{ex.get("confidence", 0):.0%}</b> <span class="vo-muted">({how})</span><br>{rows}'
+            f'confidence <b>{float(ex.get("confidence") or 0):.0%}</b> <span class="vo-muted">({how})</span><br>{rows}'
+            f'{check}'
             f'{"<br><span class=vo-muted>Note: " + esc(ex["notes"]) + "</span>" if ex.get("notes") else ""}</div>')
+
+
+VENDOR_TONE = {"good": ("#1B7F4B", "#E7F5EC", "✓"), "action": ("#9A6700", "#FFF6DD", "↺"),
+               "stop": ("#B42318", "#FDECEA", "✕"), "wait": ("#175CD3", "#EFF4FF", "…")}
+
+
+def vendor_card(view, request_ref=None, code=None):
+    """The vendor's version of the result: plain words, no internal reasoning."""
+    fg, bg, icon = VENDOR_TONE[view["tone"]]
+    fixes = "".join(f"<li>{esc(f)}</li>" for f in view["fixes"])
+    ref = (f'<div class="sub">Your reference: <b>{esc(request_ref)}</b> &nbsp;·&nbsp; Access code: '
+           f'<b>{esc(code)}</b> &nbsp;<span class="vo-muted">(keep both: you need them to check your status)</span></div>'
+           if request_ref else "")
+    st.markdown(
+        f'<div class="vo-status" style="background:{bg}; border:1px solid {fg}33;">'
+        f'<div class="big" style="color:{fg};">{icon}&nbsp; {esc(view["title"])}</div>'
+        f'<div class="sub">{esc(view["message"])}</div>'
+        f'{"<ol class=sub>" + fixes + "</ol>" if fixes else ""}{ref}</div>', unsafe_allow_html=True)
 
 
 def worst_of(results):
@@ -182,4 +219,4 @@ def email_box(email):
         return
     st.markdown(f"**To:** {esc(email['to'])}  \n**Subject:** {esc(email['subject'])}")
     st.text_area("Email body", email["body"], height=260, label_visibility="collapsed")
-    st.caption("Drafted automatically from the failed checks. In this demo it's shown here, not sent.")
+    st.caption("Written automatically from the failed checks. In this demo the email is shown here, not sent.")

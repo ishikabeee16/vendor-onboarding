@@ -14,7 +14,8 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-os.environ.setdefault("DATABASE_URL", f"sqlite:///{tempfile.mkdtemp()}/test.db")  # fresh DB every run
+if __name__ == "__main__":
+    os.environ.setdefault("DATABASE_URL", f"sqlite:///{tempfile.mkdtemp()}/test.db")  # fresh DB every run
 
 import db       # noqa: E402
 import engine   # noqa: E402
@@ -31,8 +32,15 @@ def answer_key_reader(data, mime_type, cache=None):
         for d in testcases.case_documents(case):
             if d["content"] == data:
                 t = TRUTH[d["filename"]]
-                return {**t, "confidence": 0.95 if t["readable"] else 0.3,
-                        "fields": {k: v for k, v in t["fields"].items() if v}}
+                fields = {k: v for k, v in t["fields"].items() if v}
+                if t["readable"]:
+                    return {**t, "confidence": 0.95, "fields": fields,
+                            "second_read": {"agrees": True, "differs_on": [], "values": {}}}
+                # a blurry document: pretend the two readings disagreed, as they do on the live AI
+                return {**t, "confidence": 0.3, "fields": fields,
+                        "notes": "Two independent readings of this document disagreed on: account number, ifsc.",
+                        "second_read": {"agrees": False, "differs_on": ["account_number", "ifsc"],
+                                        "values": {"account_number": "1234351948877", "ifsc": "CNRB0002210"}}}
     return {"error": "unknown file"}
 
 
