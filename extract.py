@@ -27,7 +27,7 @@ MODEL_CANDIDATES = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini
                     "gemini-3.8-flash"]
 RETIRED_MODELS = {"gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"}
 DEFAULT_MODEL = MODEL_CANDIDATES[0]
-CALL_TIMEOUT_SECONDS = 20
+CALL_TIMEOUT_SECONDS = 15
 # The numbers that matter for payment. Two independent readings must agree on every one of them.
 KEY_NUMBERS = ["gstin", "pan", "account_number", "ifsc"]
 
@@ -199,60 +199,81 @@ def _one_read(part, skip_models=()):
     return result, model
 
 
-def read_document(data: bytes, mime_type: str, cache=None) -> dict:
-    """Read one document TWICE and only trust numbers that both readings agree on.
+def _confirmed_by_form(fields, expect):
+    """True if every key number the vendor typed appears, identical, in what the AI read."""
+    return bool(expect) and all(_norm(fields.get(k)) == _norm(v) for k, v in expect.items() if v)
 
-    Why twice: in testing, a blurry cheque photo was read three times and gave three different
-    account numbers, each time with "85-95% confidence". The AI's own confidence can't be trusted.
-    Two independent readings that agree are much stronger evidence than one confident reading; if
-    they disagree on a key number, we treat the document as unreadable and ask for a clearer copy.
+
+def read_document(data: bytes, mime_type: str, cache=None, expect=None) -> dict:
+    """Read one document, and decide how far the reading can be trusted.
+
+    `expect` = the key numbers the vendor typed on the form for this document (e.g. the account
+    number and IFSC for a cheque).
+
+    Why this is careful: in testing, a blurry cheque photo was read three times and gave three
+    different account numbers, each time with "85-95% confidence". The AI's own confidence can't
+    be trusted on its own. So a number is only trusted when two independent sources agree:
+      - the AI's reading matches what the vendor typed  -> trusted (form + AI agree), or
+      - it doesn't match, so we read the document a SECOND time, with a different model if we can:
+          both readings agree  -> the document really does say something different from the form
+          readings disagree    -> the document is not clear enough; ask for a better copy.
 
     Returns {document_type, readable, confidence, fields, notes, second_read{...}, cached, seconds}
     or {error: "..."} if no AI model could be reached at all.
     """
-    key = f"{fingerprint(data)}:v2"
-    if cache is not None:
-        hit = cache.get(key)
-        if hit:
-            return {**hit, "cached": True, "seconds": 0.0}
-    if not ai_available():
-        return {"error": "Document reading is not configured"}
-
-    from google.genai import types
-    part = types.Part.from_bytes(data=data, mime_type=mime_type)
+    key = f"{fingerprint(data)}:v3"
     start = time.time()
-    try:
-        first, model_a = _one_read(part)
-    except ValueError as e:          # the file itself is broken (corrupt PDF, not an image...)
-        return {"document_type": "other", "readable": False, "confidence": 0.0, "fields": {},
-                "notes": str(e), "cached": False, "seconds": round(time.time() - start, 1)}
-    except RuntimeError as e:        # no model reachable
-        return {"error": str(e)}
+    first = cache.get(key) if cache is not None else None
+    cached = first is not None
+    if first is None:
+        if not ai_available():
+            return {"error": "Document reading is not configured"}
+        from google.genai import types
+        part = types.Part.from_bytes(data=data, mime_type=mime_type)
+        try:
+            first, model_a = _one_read(part)
+        except ValueError as e:          # the file itself is broken (corrupt PDF, not an image...)
+            return {"document_type": "other", "readable": False, "confidence": 0.0, "fields": {},
+                    "notes": str(e), "cached": False, "seconds": round(time.time() - start, 1)}
+        except RuntimeError as e:        # no model reachable
+            return {"error": str(e)}
+        first["_model"] = model_a
+        if cache is not None:
+            cache.put(key, first)
 
-    result = dict(first)
+    result = {k: v for k, v in first.items() if not k.startswith("_")}
+    done = lambda: {**result, "cached": cached, "seconds": round(time.time() - start, 1)}   # noqa: E731
+
+    if first.get("second_read", {}).get("agrees") is not None:
+        return done()                    # a real second reading was already done for this file
+    if _confirmed_by_form(result["fields"], expect):
+        result["second_read"] = {"agrees": None, "confirmed_by_form": True, "differs_on": [], "values": {}}
+        return done()
+
+    # The reading and the form differ (or there was nothing to compare with): read it again.
     try:
-        second, model_b = _one_read(part, skip_models=(model_a,))   # a different model if possible
-        disagree = [k for k in KEY_NUMBERS
-                    if (k in first["fields"] or k in second["fields"])
-                    and _norm(first["fields"].get(k)) != _norm(second["fields"].get(k))]
-        if first.get("document_type") != second.get("document_type"):
-            disagree.append("document type")
-        result["second_read"] = {"agrees": not disagree, "differs_on": disagree,
-                                 "values": {k: second["fields"].get(k) for k in KEY_NUMBERS
-                                            if k in second["fields"]}}
-        if disagree:
-            result["readable"] = False
-            result["confidence"] = min(float(result.get("confidence") or 0), 0.3)
-            result["notes"] = ("Two independent readings of this document disagreed on: "
-                               + ", ".join(d.replace("_", " ") for d in disagree)
-                               + ". It is not clear enough to trust.")
+        from google.genai import types
+        part = types.Part.from_bytes(data=data, mime_type=mime_type)
+        second, _ = _one_read(part, skip_models=(first.get("_model"),))
     except (RuntimeError, ValueError):
-        # Second reading unavailable: keep the first, but say so and don't call it verified.
-        result["second_read"] = {"agrees": None, "differs_on": [], "values": {}}
-
-    if cache is not None and result.get("second_read", {}).get("agrees") is not None:
-        cache.put(key, result)       # only remember fully double-checked readings
-    return {**result, "cached": False, "seconds": round(time.time() - start, 1)}
+        result["second_read"] = {"agrees": None, "differs_on": [], "values": {}}   # say so; not verified
+        return done()
+    disagree = [k for k in KEY_NUMBERS
+                if (k in result["fields"] or k in second["fields"])
+                and _norm(result["fields"].get(k)) != _norm(second["fields"].get(k))]
+    if result.get("document_type") != second.get("document_type"):
+        disagree.append("document type")
+    result["second_read"] = {"agrees": not disagree, "differs_on": disagree,
+                             "values": {k: second["fields"].get(k) for k in KEY_NUMBERS if k in second["fields"]}}
+    if disagree:
+        result["readable"] = False
+        result["confidence"] = min(float(result.get("confidence") or 0), 0.3)
+        result["notes"] = ("Two independent readings of this document disagreed on: "
+                           + ", ".join(d.replace("_", " ") for d in disagree)
+                           + ". It is not clear enough to trust.")
+    if cache is not None:
+        cache.put(key, {**result, "_model": first.get("_model")})
+    return done()
 
 
 def judge_names(a: str, b: str) -> dict | None:

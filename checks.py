@@ -422,8 +422,9 @@ def c13_document_type(sub, ctx):
             continue
         dtype = ex.get("document_type")
         if dtype in slot_rules["accepts"]:
-            agrees = (ex.get("second_read") or {}).get("agrees")
-            checked = ("Read twice; both readings agree." if agrees
+            second = ex.get("second_read") or {}
+            checked = ("Read twice; both readings agree." if second.get("agrees")
+                       else "Its numbers match what the vendor typed." if second.get("confirmed_by_form")
                        else "Second reading wasn't available, so this is a single reading.")
             results.append(ok("C13", 4, name, f"AI identified it as a {dtype.replace('_', ' ')} "
                               f"(confidence {conf:.0%}). {checked}", slot=slot, confidence=conf))

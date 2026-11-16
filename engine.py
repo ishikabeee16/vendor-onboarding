@@ -29,6 +29,14 @@ def _worst(results):
     return "pass"
 
 
+def _expected_numbers(slot, payload):
+    """The key numbers the vendor typed that should appear on this document."""
+    tax, bank = payload.get("tax", {}), payload.get("bank", {})
+    return {"gst_certificate": {"gstin": tax.get("gstin")},
+            "pan_card": {"pan": tax.get("pan")},
+            "bank_proof": {"account_number": bank.get("account_number"), "ifsc": bank.get("ifsc")}}.get(slot, {})
+
+
 def run_pipeline(submission_id, emit=lambda *a: None, reader=None, name_judge=None, pause=STEP_PAUSE):
     """Run every stage for one submission and save the result. Returns the run id.
 
@@ -93,7 +101,8 @@ def _run(run_id, started, submission_id, emit, reader, name_judge, pause):
     if reader is extract.read_document:
         extract.ai_available()                  # load settings on this thread before the workers start
     with ThreadPoolExecutor(max_workers=max(1, len(docs))) as pool:
-        futures = {pool.submit(reader, d["content"], d["mime_type"], cache=cache): d["slot"] for d in docs}
+        futures = {pool.submit(reader, d["content"], d["mime_type"], cache=cache,
+                               expect=_expected_numbers(d["slot"], payload)): d["slot"] for d in docs}
         for fut in as_completed(futures):
             slot = futures[fut]
             try:

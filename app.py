@@ -356,7 +356,7 @@ def live_run(sid):
             slot, label, filename = args
             reading[slot] = boxes[4]["body"].empty()
             reading[slot].markdown(f'<div class="vo-ai">⏳ Reading the <b>{ui.esc(label)}</b> '
-                                   f'({ui.esc(filename)}), twice…</div>', unsafe_allow_html=True)
+                                   f'({ui.esc(filename)})…</div>', unsafe_allow_html=True)
         elif event == "doc_read_done":
             slot, label, ex = args
             reading[slot].markdown(ui.ai_box_html(label, ex), unsafe_allow_html=True)

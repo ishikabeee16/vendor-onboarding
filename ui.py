@@ -142,8 +142,12 @@ def ai_box_html(label, ex):
     rows = " · ".join(f"<b>{esc(k.replace('_', ' '))}</b>: {esc(v)}" for k, v in fields.items()) or "no details found"
     how = "read earlier, reused" if ex.get("cached") else f"read in {ex.get('seconds', '?')}s"
     second = ex.get("second_read") or {}
-    if second.get("agrees"):
-        check = '<br><span style="color:#1B7F4B;">✓ Read twice. Both readings agree on every key number.</span>'
+    if second.get("confirmed_by_form"):
+        check = ('<br><span style="color:#1B7F4B;">✓ The key numbers match what the vendor typed, '
+                 'so the form and the AI agree.</span>')
+    elif second.get("agrees"):
+        check = ('<br><span style="color:#1B7F4B;">✓ Differs from the form, so it was read a second time. '
+                 'Both readings agree on every key number.</span>')
     elif second.get("differs_on"):
         other = ", ".join(f"{esc(k.replace('_', ' '))}: {esc(v)}" for k, v in second.get("values", {}).items())
         check = (f'<br><span style="color:#B4560B;">⚠ Read twice and the readings disagree on '

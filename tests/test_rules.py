@@ -66,15 +66,20 @@ A = {"document_type": "cancelled_cheque", "readable": True, "confidence": 0.9,
      "fields": {"account_number": "1234101998877", "ifsc": "CNRB0003310"}}
 B = {"document_type": "cancelled_cheque", "readable": True, "confidence": 0.9,
      "fields": {"account_number": "1234351948877", "ifsc": "CNRB0003310"}}
-reads[:] = [(dict(A), "m1"), (dict(B), "m2")]
-out = extract.read_document(b"x", "image/jpeg")
+EXPECT = {"account_number": "1234101998877", "ifsc": "CNRB0003310"}
+reads[:] = [(dict(A), "m1")]
+out = extract.read_document(b"w", "image/jpeg", expect=EXPECT)
+check("reading matches the form -> trusted without a second reading",
+      out["second_read"].get("confirmed_by_form") is True and reads == [])
+reads[:] = [(dict(B), "m1"), (dict(A), "m2")]
+out = extract.read_document(b"x", "image/jpeg", expect=EXPECT)
 check("double read: readings disagree -> not readable, confidence forced low",
       out["readable"] is False and out["confidence"] <= 0.3 and out["second_read"]["differs_on"] == ["account_number"])
-reads[:] = [(dict(A), "m1"), (dict(A), "m2")]
-out = extract.read_document(b"y", "image/jpeg")
-check("double read: readings agree -> trusted", out["readable"] is True and out["second_read"]["agrees"] is True)
+reads[:] = [(dict(B), "m1"), (dict(B), "m2")]
+out = extract.read_document(b"y", "image/jpeg", expect=EXPECT)
+check("double read: differs from the form but both readings agree -> a real mismatch, readable", out["readable"] is True and out["second_read"]["agrees"] is True)
 reads[:] = [(dict(A), "m1"), ({**A, "fields": {"account_number": "1234 1019 98877", "ifsc": "cnrb0003310"}}, "m2")]
-out = extract.read_document(b"z", "image/jpeg")
+out = extract.read_document(b"z", "image/jpeg", expect={"account_number": "999"})
 check("double read: spaces and capitals don't count as disagreement", out["second_read"]["agrees"] is True)
 extract._one_read = real
 

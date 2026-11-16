@@ -26,7 +26,7 @@ TRUTH = testcases.document_truth()
 REAL_AI = "--real-ai" in sys.argv
 
 
-def answer_key_reader(data, mime_type, cache=None):
+def answer_key_reader(data, mime_type, cache=None, expect=None):
     """Pretend-AI that returns exactly what is printed on our fake documents."""
     for case in testcases.list_cases(india_only=False):
         for d in testcases.case_documents(case):
